@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#ffffff">
-    <title>BMS Ticket Fullscreen</title>
+    
+    <link rel="manifest" id="my-manifest">
+    
+    <title>BMS Ticket App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
     <style>
         /* --- RESET & FULLSCREEN SETUP --- */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -31,7 +35,7 @@
             background-color: #F2F2F2;
         }
 
-        /* --- FAKE STATUS BAR (Optional - for screenshot look) --- */
+        /* --- FAKE STATUS BAR --- */
         .status-bar {
             height: 35px; /* Standard Android height */
             background: #fff;
@@ -44,6 +48,7 @@
             color: #111;
             z-index: 30;
             flex-shrink: 0;
+            padding-top: env(safe-area-inset-top); /* Notch support */
         }
 
         /* --- APP NAVIGATION --- */
@@ -159,13 +164,13 @@
         .total-amount { font-size: 18px; font-weight: 800; color: #333; }
         .cancel-btn { border: 1px solid #e5e5e5; padding: 10px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; color: #DA1C5C; background: #fff; }
 
-        /* --- EDITOR OVERLAY (Hidden by default) --- */
+        /* --- EDITOR OVERLAY --- */
         .editor-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5);
             z-index: 100;
-            display: none; /* Hidden */
+            display: none;
             justify-content: flex-end;
         }
         .editor-overlay.active { display: flex; }
@@ -187,7 +192,25 @@
         .input-field { width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 6px; outline:none; background: #f9fafb; }
         .input-field:focus { border-color: #DA1C5C; background: #fff; }
 
-        /* --- FAB (Floating Action Button) for Edit --- */
+        /* --- INSTALL BUTTON STYLE --- */
+        .install-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #DA1C5C 0%, #be185d 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(218, 28, 92, 0.3);
+            display: none; /* Hidden by default until prompt is ready */
+        }
+
+        /* --- FAB (Floating Action Button) --- */
         .fab-edit {
             position: fixed;
             bottom: 90px;
@@ -213,13 +236,13 @@
 
     <div class="app-container">
         
-        <!--div class="status-bar" id="statusBar">
+        <div class="status-bar" id="statusBar">
             <span id="clock">12:30</span>
             <div class="flex gap-1">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
             </div>
-        </div-->
+        </div>
 
         <div class="app-nav">
             <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -227,7 +250,6 @@
         </div>
 
         <div class="scroll-area">
-            
             <div class="ticket-card">
                 <div class="card-poster" id="out-poster">
                     <div class="poster-overlay">
@@ -303,6 +325,11 @@
                 <h3 class="font-bold text-lg">Edit Ticket</h3>
                 <button onclick="toggleEditor()" class="text-gray-500 font-bold text-xl">&times;</button>
             </div>
+
+            <button id="installBtn" class="install-btn" onclick="installApp()">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                INSTALL APP TO HOME SCREEN
+            </button>
             
             <div class="input-group">
                 <label class="input-label">Movie Poster URL</label>
@@ -344,12 +371,58 @@
                 <label class="input-label">Status Bar Time</label>
                 <input type="text" id="in-clock" class="input-field" value="12:30" oninput="updateTicket()">
             </div>
-
-            <button onclick="toggleFullscreen()" class="w-full bg-gray-800 text-white p-3 rounded font-bold mt-4">Toggle Fullscreen Mode</button>
         </div>
     </div>
 
     <script>
+        // 1. GENERATE DYNAMIC MANIFEST
+        const manifest = {
+            "name": "BMS Ticket",
+            "short_name": "Ticket",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#F5F5F5",
+            "theme_color": "#ffffff",
+            "icons": [{
+                "src": "https://cdn-icons-png.flaticon.com/512/2503/2503508.png", // Generic ticket icon
+                "sizes": "512x512",
+                "type": "image/png"
+            }]
+        };
+        const content = encodeURIComponent(JSON.stringify(manifest));
+        const url = "data:application/json;charset=utf-8," + content;
+        document.getElementById('my-manifest').setAttribute('href', url);
+
+        // 2. REGISTER FAKE SERVICE WORKER (Required for PWA install criteria)
+        if ('serviceWorker' in navigator) {
+            const swCode = `self.addEventListener('fetch', (event) => { return; });`;
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(e => console.log(e));
+        }
+
+        // 3. HANDLE INSTALL PROMPT
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'flex'; // Show button when ready
+        });
+
+        async function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            }
+        }
+
+        // 4. EDITOR LOGIC
         function toggleEditor() {
             const drawer = document.getElementById('editorDrawer');
             if (drawer.style.display === 'flex') {
@@ -372,17 +445,6 @@
             document.getElementById('out-id').innerText = "Booking ID: " + document.getElementById('in-id').value;
             document.getElementById('out-price').innerText = document.getElementById('in-price').value;
             document.getElementById('clock').innerText = document.getElementById('in-clock').value;
-        }
-
-        // Optional: Enter Fullscreen
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen(); 
-                }
-            }
         }
     </script>
 </body>
