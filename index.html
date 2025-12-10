@@ -2,264 +2,387 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BMS App Ticket Replica</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#ffffff">
+    <title>BMS Ticket Fullscreen</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <style>
-        body {
-            background-color: #111; /* Dark Phone BG */
+        /* --- RESET & FULLSCREEN SETUP --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body, html {
+            background-color: #F5F5F5;
             margin: 0;
+            padding: 0;
             font-family: 'Roboto', sans-serif;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* Prevent body scroll, handle inside app */
         }
 
-        /* --- THE PHONE SCREEN --- */
-        .phone-screen {
-            width: 375px;
-            height: 750px;
-            background-color: #F5F5F5;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            border-radius: 20px;
+        /* --- APP LAYOUT CONTAINER --- */
+        .app-container {
             display: flex;
             flex-direction: column;
-        }
-
-        /* --- EDITOR CONTROLS (Hidden by default, hover to see) --- */
-        .editor-overlay {
-            position: absolute;
-            top: 0; left: 0;
-            width: 300px;
             height: 100%;
-            background: rgba(255,255,255,0.95);
-            padding: 20px;
-            transform: translateX(-280px); /* Hide mostly */
-            transition: transform 0.3s;
-            z-index: 99;
-            box-shadow: 5px 0 15px rgba(0,0,0,0.2);
-            overflow-y: auto;
-        }
-        .editor-overlay:hover { transform: translateX(0); }
-        .editor-label { font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; margin-top: 10px; }
-        .editor-input { width: 100%; padding: 5px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; }
-
-        /* --- TICKET HEADER (Poster) --- */
-        .poster-area {
-            height: 240px;
-            background-image: url('https://image.tmdb.org/t/p/original/8UlWHLMpgZm9bx6QYh0NFoq67TZ.jpg'); /* Default Poster */
-            background-size: cover;
-            background-position: center;
+            width: 100%;
             position: relative;
-        }
-        /* Gradient Fade at bottom of poster */
-        .poster-area::after {
-            content: '';
-            position: absolute;
-            bottom: 0; left: 0; width: 100%; height: 100px;
-            background: linear-gradient(to top, #F5F5F5 10%, transparent);
+            background-color: #F2F2F2;
         }
 
-        /* --- THE CARD --- */
-        .ticket-card {
+        /* --- FAKE STATUS BAR (Optional - for screenshot look) --- */
+        .status-bar {
+            height: 35px; /* Standard Android height */
             background: #fff;
-            margin: -40px 20px 20px 20px; /* Overlap the poster */
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            position: relative;
-            z-index: 10;
-            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #111;
+            z-index: 30;
+            flex-shrink: 0;
+        }
+
+        /* --- APP NAVIGATION --- */
+        .app-nav {
+            height: 56px; /* Material Design standard */
+            background: #fff;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid #e0e0e0;
+            z-index: 30;
+            flex-shrink: 0;
+        }
+
+        /* --- SCROLLABLE CONTENT AREA --- */
+        .scroll-area {
+            flex: 1; /* Takes all remaining height */
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px;
             padding-bottom: 20px;
         }
 
-        .movie-info {
-            padding: 20px 20px 10px 20px;
-            text-align: center;
+        /* --- THE TICKET CARD --- */
+        .ticket-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 20px;
         }
-        .movie-title { font-size: 18px; font-weight: 800; color: #333; margin-bottom: 4px; text-transform: uppercase; line-height: 1.2; }
-        .movie-tags { font-size: 11px; color: #888; font-weight: 500; }
 
-        .divider-dashed {
-            border-top: 1px dashed #ddd;
-            margin: 15px 0;
+        .card-poster {
+            height: 28vh; /* Responsive height based on screen size */
+            min-height: 200px;
+            background-color: #333;
+            background-image: url('https://image.tmdb.org/t/p/original/8UlWHLMpgZm9bx6QYh0NFoq67TZ.jpg');
+            background-size: cover;
+            background-position: top center;
             position: relative;
         }
-        /* Semi-circles for ticket notch effect */
-        .divider-dashed::before, .divider-dashed::after {
-            content: '';
+
+        .poster-overlay {
             position: absolute;
-            top: -10px;
-            width: 20px; height: 20px;
-            background-color: #F5F5F5;
-            border-radius: 50%;
-        }
-        .divider-dashed::before { left: -10px; }
-        .divider-dashed::after { right: -10px; }
-
-        .details-row {
-            padding: 0 20px;
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
-        .d-label { font-size: 10px; color: #999; text-transform: uppercase; font-weight: 600; }
-        .d-val { font-size: 13px; color: #000; font-weight: 600; }
-        .d-val-highlight { color: #DA1C5C; } /* BMS Red */
-
-        /* QR AREA */
-        .qr-area {
-            text-align: center;
-            padding: 10px;
+            bottom: 0; left: 0; width: 100%;
+            height: 120px;
+            background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
             display: flex;
             flex-direction: column;
-            align-items: center;
+            justify-content: flex-end;
+            padding: 16px;
         }
-        .booking-id-pill {
-            background-color: #FEE2E2; /* Light Red */
-            color: #DA1C5C;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            letter-spacing: 0.5px;
-            border: 1px dashed #DA1C5C;
-        }
-        .instruction { font-size: 10px; color: #aaa; margin-top: 8px; }
 
-        /* --- BOTTOM TOTAL BAR --- */
-        .bottom-bar {
-            margin-top: auto;
+        .t-movie-title { color: #fff; font-size: 22px; font-weight: 700; line-height: 1.1; margin-bottom: 4px; }
+        .t-movie-meta { color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 400; }
+
+        /* NOTCH DIVIDER */
+        .ticket-divider {
+            position: relative;
+            height: 30px;
             background: #fff;
-            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ticket-divider::before, .ticket-divider::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 24px; height: 24px;
+            background-color: #F2F2F2; /* Matches bg color */
+            border-radius: 50%;
+            transform: translateY(-50%);
+        }
+        .ticket-divider::before { left: -12px; }
+        .ticket-divider::after { right: -12px; }
+        .divider-dash { width: 85%; border-top: 1px dashed #e5e7eb; }
+
+        /* TICKET DETAILS */
+        .card-details { padding: 0 20px 25px 20px; text-align: center; }
+        
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 16px; text-align: left; }
+        .text-label { font-size: 11px; color: #777; text-transform: uppercase; margin-bottom: 3px; font-weight: 600; }
+        .text-val { font-size: 15px; color: #111; font-weight: 500; }
+        
+        .booking-id-pill {
+            display: inline-block;
+            background-color: #fdf2f8; /* Pink-50 */
+            color: #be185d; /* Pink-700 */
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 18px;
+            border-radius: 50px;
+            margin-bottom: 15px;
+            border: 1px solid #fbcfe8;
+        }
+
+        .qr-img { width: 150px; height: 150px; mix-blend-mode: multiply; margin: 0 auto; display: block; }
+
+        /* --- BOTTOM FOOTER --- */
+        .bottom-nav {
+            background: #fff;
+            border-top: 1px solid #e5e5e5;
+            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-top: 1px solid #e5e5e5;
+            flex-shrink: 0;
+            padding-bottom: max(12px, env(safe-area-inset-bottom)); /* iPhone Safe Area */
         }
-        .cancel-btn {
-            border: 1px solid #ddd;
-            color: #DA1C5C;
-            padding: 6px 15px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
+        .total-label { font-size: 11px; color: #888; text-transform: uppercase; }
+        .total-amount { font-size: 18px; font-weight: 800; color: #333; }
+        .cancel-btn { border: 1px solid #e5e5e5; padding: 10px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; color: #DA1C5C; background: #fff; }
+
+        /* --- EDITOR OVERLAY (Hidden by default) --- */
+        .editor-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            display: none; /* Hidden */
+            justify-content: flex-end;
         }
-        .total-price {
-            text-align: right;
+        .editor-overlay.active { display: flex; }
+        
+        .editor-panel {
+            width: 85%;
+            max-width: 320px;
+            height: 100%;
+            background: #fff;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease;
         }
-        .total-label { font-size: 10px; color: #888; }
-        .total-val { font-size: 14px; font-weight: 800; color: #333; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+        .input-group { margin-bottom: 15px; }
+        .input-label { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; margin-bottom: 5px; display:block;}
+        .input-field { width: 100%; padding: 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 6px; outline:none; background: #f9fafb; }
+        .input-field:focus { border-color: #DA1C5C; background: #fff; }
+
+        /* --- FAB (Floating Action Button) for Edit --- */
+        .fab-edit {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 50px; height: 50px;
+            background-color: #DA1C5C;
+            border-radius: 50%;
+            box-shadow: 0 4px 15px rgba(218, 28, 92, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 50;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.2s;
+        }
+        .fab-edit:active { transform: scale(0.9); }
 
     </style>
 </head>
 <body>
 
-    <div class="editor-overlay">
-        <h3 class="font-bold text-sm mb-2">Ticket Details</h3>
+    <div class="app-container">
         
-        <div class="editor-label">Movie Poster URL</div>
-        <input id="in-poster" class="editor-input" value="https://image.tmdb.org/t/p/original/8UlWHLMpgZm9bx6QYh0NFoq67TZ.jpg" oninput="refresh()">
+        <!--div class="status-bar" id="statusBar">
+            <span id="clock">12:30</span>
+            <div class="flex gap-1">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+            </div>
+        </div-->
 
-        <div class="editor-label">Movie Title</div>
-        <input id="in-title" class="editor-input" value="WONDER WOMAN 1984" oninput="refresh()">
+        <div class="app-nav">
+            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            <span class="ml-4 font-bold text-gray-800 text-lg">Your Orders</span>
+        </div>
 
-        <div class="editor-label">Tags (Lang | Format)</div>
-        <input id="in-tags" class="editor-input" value="English | 3D | UA" oninput="refresh()">
+        <div class="scroll-area">
+            
+            <div class="ticket-card">
+                <div class="card-poster" id="out-poster">
+                    <div class="poster-overlay">
+                        <div class="t-movie-title" id="out-title">AVENGERS: DOOMSDAY</div>
+                        <div class="t-movie-meta" id="out-meta">English, 3D (UA)</div>
+                    </div>
+                </div>
 
-        <div class="editor-label">Date & Time</div>
-        <input id="in-date" class="editor-input" value="Sun, 14 Dec | 07:30 PM" oninput="refresh()">
+                <div class="ticket-divider">
+                    <div class="divider-dash"></div>
+                </div>
 
-        <div class="editor-label">Cinema</div>
-        <input id="in-cinema" class="editor-input" value="PVR: Phoenix Marketcity, Kurla" oninput="refresh()">
+                <div class="card-details">
+                    <div class="info-row">
+                        <div>
+                            <div class="text-label">Date & Time</div>
+                            <div class="text-val" id="out-date">Sun, 14 Dec | 07:30 PM</div>
+                        </div>
+                    </div>
 
-        <div class="editor-label">Screen</div>
-        <input id="in-screen" class="editor-input" value="AUDI 03" oninput="refresh()">
+                    <div class="info-row">
+                        <div style="max-width: 65%;">
+                            <div class="text-label">Theater</div>
+                            <div class="text-val" id="out-theater">PVR: Phoenix Marketcity, Kurla</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-label">Screen</div>
+                            <div class="text-val" id="out-screen">Audi 03</div>
+                        </div>
+                    </div>
 
-        <div class="editor-label">Seat Info</div>
-        <input id="in-seats" class="editor-input" value="GOLD - F4, F5 (2 Tickets)" oninput="refresh()">
+                    <div class="info-row">
+                        <div>
+                            <div class="text-label">Seats</div>
+                            <div class="text-val">
+                                <span id="out-count" class="text-gray-500 font-normal mr-1">2 Tickets</span>
+                                <span id="out-seats" class="font-bold">GOLD - F4, F5</span>
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="editor-label">Booking ID</div>
-        <input id="in-id" class="editor-input" value="W3E4R5T" oninput="refresh()">
+                    <div style="border-top: 1px solid #f3f4f6; margin: 15px 0;"></div>
 
-        <div class="editor-label">Total Amount</div>
-        <input id="in-price" class="editor-input" value="Rs. 840.00" oninput="refresh()">
+                    <div class="qr-box">
+                        <div class="booking-id-pill" id="out-id">Booking ID: W3E4R5T</div>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BMS-TICKET-VALID" class="qr-img" alt="QR">
+                        <div class="text-xs text-gray-400 mt-2 font-medium">Scan this QR code at entry</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-6 text-xs text-gray-400 font-medium pb-4">
+                Tap for support or more options
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <div class="total-section">
+                <div class="total-label">Total Amount</div>
+                <div class="total-amount" id="out-price">Rs. 840.00</div>
+            </div>
+            <button class="cancel-btn">Cancel Booking</button>
+        </div>
     </div>
 
-    <div class="phone-screen">
-        
-        <div class="poster-area" id="out-poster"></div>
+    <button class="fab-edit" onclick="toggleEditor()">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+    </button>
 
-        <div class="ticket-card">
+    <div class="editor-overlay" id="editorDrawer" onclick="if(event.target === this) toggleEditor()">
+        <div class="editor-panel">
+            <div class="flex justify-between items-center mb-6 border-b pb-4">
+                <h3 class="font-bold text-lg">Edit Ticket</h3>
+                <button onclick="toggleEditor()" class="text-gray-500 font-bold text-xl">&times;</button>
+            </div>
             
-            <div class="movie-info">
-                <div class="movie-title" id="out-title">WONDER WOMAN 1984</div>
-                <div class="movie-tags" id="out-tags">English | 3D | UA</div>
+            <div class="input-group">
+                <label class="input-label">Movie Poster URL</label>
+                <input type="text" id="in-poster" class="input-field" value="https://image.tmdb.org/t/p/original/8UlWHLMpgZm9bx6QYh0NFoq67TZ.jpg" oninput="updateTicket()">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Movie Title</label>
+                <input type="text" id="in-title" class="input-field" value="AVENGERS: DOOMSDAY" oninput="updateTicket()">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Format / Lang</label>
+                <input type="text" id="in-meta" class="input-field" value="English, 3D (UA)" oninput="updateTicket()">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Date & Time</label>
+                <input type="text" id="in-date" class="input-field" value="Sun, 14 Dec | 07:30 PM" oninput="updateTicket()">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Theater Name</label>
+                <input type="text" id="in-theater" class="input-field" value="PVR: Phoenix Marketcity, Kurla" oninput="updateTicket()">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Screen Info</label>
+                <input type="text" id="in-screen" class="input-field" value="Audi 03" oninput="updateTicket()">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Seat Numbers</label>
+                <input type="text" id="in-seats" class="input-field" value="GOLD - F4, F5" oninput="updateTicket()">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Booking ID</label>
+                <input type="text" id="in-id" class="input-field" value="W3E4R5T" oninput="updateTicket()">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Total Amount</label>
+                <input type="text" id="in-price" class="input-field" value="Rs. 840.00" oninput="updateTicket()">
+            </div>
+            <div class="input-group">
+                <label class="input-label">Status Bar Time</label>
+                <input type="text" id="in-clock" class="input-field" value="12:30" oninput="updateTicket()">
             </div>
 
-            <div class="divider-dashed"></div>
-
-            <div class="details-row">
-                <div>
-                    <div class="d-label">Date & Time</div>
-                    <div class="d-val" id="out-date">Sun, 14 Dec | 07:30 PM</div>
-                </div>
-            </div>
-
-            <div class="details-row">
-                <div>
-                    <div class="d-label">Cinema</div>
-                    <div class="d-val" id="out-cinema">PVR: Phoenix Marketcity, Kurla</div>
-                </div>
-            </div>
-
-            <div class="details-row">
-                <div>
-                    <div class="d-label">Screen</div>
-                    <div class="d-val" id="out-screen">AUDI 03</div>
-                </div>
-                <div class="text-right">
-                    <div class="d-label text-right">Seats</div>
-                    <div class="d-val d-val-highlight" id="out-seats">GOLD - F4, F5 (2 Tickets)</div>
-                </div>
-            </div>
-
-            <div class="divider-dashed"></div>
-
-            <div class="qr-area">
-                <div class="booking-id-pill" id="out-id">BOOKING ID: W3E4R5T</div>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=BMS-APP-TICKET" style="width: 100px; mix-blend-mode: multiply;">
-                <div class="instruction">Scan this QR Code at the entrance</div>
-            </div>
+            <button onclick="toggleFullscreen()" class="w-full bg-gray-800 text-white p-3 rounded font-bold mt-4">Toggle Fullscreen Mode</button>
         </div>
-
-        <div class="bottom-bar">
-            <div class="cancel-btn">Cancel Booking</div>
-            <div class="total-price">
-                <div class="total-label">Total Amount</div>
-                <div class="total-val" id="out-price">Rs. 840.00</div>
-            </div>
-        </div>
-
     </div>
 
     <script>
-        function refresh() {
+        function toggleEditor() {
+            const drawer = document.getElementById('editorDrawer');
+            if (drawer.style.display === 'flex') {
+                drawer.style.display = 'none';
+                drawer.classList.remove('active');
+            } else {
+                drawer.style.display = 'flex';
+                drawer.classList.add('active');
+            }
+        }
+
+        function updateTicket() {
             document.getElementById('out-poster').style.backgroundImage = `url('${document.getElementById('in-poster').value}')`;
             document.getElementById('out-title').innerText = document.getElementById('in-title').value;
-            document.getElementById('out-tags').innerText = document.getElementById('in-tags').value;
+            document.getElementById('out-meta').innerText = document.getElementById('in-meta').value;
             document.getElementById('out-date').innerText = document.getElementById('in-date').value;
-            document.getElementById('out-cinema').innerText = document.getElementById('in-cinema').value;
+            document.getElementById('out-theater').innerText = document.getElementById('in-theater').value;
             document.getElementById('out-screen').innerText = document.getElementById('in-screen').value;
             document.getElementById('out-seats').innerText = document.getElementById('in-seats').value;
-            document.getElementById('out-id').innerText = "BOOKING ID: " + document.getElementById('in-id').value;
+            document.getElementById('out-id').innerText = "Booking ID: " + document.getElementById('in-id').value;
             document.getElementById('out-price').innerText = document.getElementById('in-price').value;
+            document.getElementById('clock').innerText = document.getElementById('in-clock').value;
+        }
+
+        // Optional: Enter Fullscreen
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen(); 
+                }
+            }
         }
     </script>
 </body>
