@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMS App Ticket Replica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #111; /* Dark Phone BG */
+            margin: 0;
+            font-family: 'Roboto', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* --- THE PHONE SCREEN --- */
+        .phone-screen {
+            width: 375px;
+            height: 750px;
+            background-color: #F5F5F5;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- EDITOR CONTROLS (Hidden by default, hover to see) --- */
+        .editor-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 300px;
+            height: 100%;
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            transform: translateX(-280px); /* Hide mostly */
+            transition: transform 0.3s;
+            z-index: 99;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.2);
+            overflow-y: auto;
+        }
+        .editor-overlay:hover { transform: translateX(0); }
+        .editor-label { font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; margin-top: 10px; }
+        .editor-input { width: 100%; padding: 5px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; }
+
+        /* --- TICKET HEADER (Poster) --- */
+        .poster-area {
+            height: 240px;
+            background-image: url('https://image.tmdb.org/t/p/original/8UlWHLMpgZm9bx6QYh0NFoq67TZ.jpg'); /* Default Poster */
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+        /* Gradient Fade at bottom of poster */
+        .poster-area::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 100px;
+            background: linear-gradient(to top, #F5F5F5 10%, transparent);
+        }
+
+        /* --- THE CARD --- */
+        .ticket-card {
+            background: #fff;
+            margin: -40px 20px 20px 20px; /* Overlap the poster */
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 10;
+            overflow: hidden;
+            padding-bottom: 20px;
+        }
+
+        .movie-info {
+            padding: 20px 20px 10px 20px;
+            text-align: center;
+        }
+        .movie-title { font-size: 18px; font-weight: 800; color: #333; margin-bottom: 4px; text-transform: uppercase; line-height: 1.2; }
+        .movie-tags { font-size: 11px; color: #888; font-weight: 500; }
+
+        .divider-dashed {
+            border-top: 1px dashed #ddd;
+            margin: 15px 0;
+            position: relative;
+        }
+        /* Semi-circles for ticket notch effect */
+        .divider-dashed::before, .divider-dashed::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            width: 20px; height: 20px;
+            background-color: #F5F5F5;
+            border-radius: 50%;
+        }
+        .divider-dashed::before { left: -10px; }
+        .divider-dashed::after { right: -10px; }
+
+        .details-row {
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .d-label { font-size: 10px; color: #999; text-transform: uppercase; font-weight: 600; }
+        .d-val { font-size: 13px; color: #000; font-weight: 600; }
+        .d-val-highlight { color: #DA1C5C; } /* BMS Red */
+
+        /* QR AREA */
+        .qr-area {
+            text-align: center;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .booking-id-pill {
+            background-color: #FEE2E2; /* Light Red */
+            color: #DA1C5C;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            border: 1px dashed #DA1C5C;
+        }
+        .instruction { font-size: 10px; color: #aaa; margin-top: 8px; }
+
+        /* --- BOTTOM TOTAL BAR --- */
+        .bottom-bar {
+            margin-top: auto;
+            background: #fff;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #e5e5e5;
+        }
+        .cancel-btn {
+            border: 1px solid #ddd;
+            color: #DA1C5C;
+            padding: 6px 15px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .total-price {
+            text-align: right;
+        }
+        .total-label { font-size: 10px; color: #888; }
+        .total-val { font-size: 14px; font-weight: 800; color: #333; }
+
+    </style>
+</head>
+<body>
+
+    <div class="editor-overlay">
+        <h3 class="font-bold text-sm mb-2">Ticket Details</h3>
+        
+        <div class="editor-label">Movie Poster URL</div>
+        <input id="in-poster" class="editor-input" value="https://image.tmdb.org/t/p/original/8UlWHLMpgZm9bx6QYh0NFoq67TZ.jpg" oninput="refresh()">
+
+        <div class="editor-label">Movie Title</div>
+        <input id="in-title" class="editor-input" value="WONDER WOMAN 1984" oninput="refresh()">
+
+        <div class="editor-label">Tags (Lang | Format)</div>
+        <input id="in-tags" class="editor-input" value="English | 3D | UA" oninput="refresh()">
+
+        <div class="editor-label">Date & Time</div>
+        <input id="in-date" class="editor-input" value="Sun, 14 Dec | 07:30 PM" oninput="refresh()">
+
+        <div class="editor-label">Cinema</div>
+        <input id="in-cinema" class="editor-input" value="PVR: Phoenix Marketcity, Kurla" oninput="refresh()">
+
+        <div class="editor-label">Screen</div>
+        <input id="in-screen" class="editor-input" value="AUDI 03" oninput="refresh()">
+
+        <div class="editor-label">Seat Info</div>
+        <input id="in-seats" class="editor-input" value="GOLD - F4, F5 (2 Tickets)" oninput="refresh()">
+
+        <div class="editor-label">Booking ID</div>
+        <input id="in-id" class="editor-input" value="W3E4R5T" oninput="refresh()">
+
+        <div class="editor-label">Total Amount</div>
+        <input id="in-price" class="editor-input" value="Rs. 840.00" oninput="refresh()">
+    </div>
+
+    <div class="phone-screen">
+        
+        <div class="poster-area" id="out-poster"></div>
+
+        <div class="ticket-card">
+            
+            <div class="movie-info">
+                <div class="movie-title" id="out-title">WONDER WOMAN 1984</div>
+                <div class="movie-tags" id="out-tags">English | 3D | UA</div>
+            </div>
+
+            <div class="divider-dashed"></div>
+
+            <div class="details-row">
+                <div>
+                    <div class="d-label">Date & Time</div>
+                    <div class="d-val" id="out-date">Sun, 14 Dec | 07:30 PM</div>
+                </div>
+            </div>
+
+            <div class="details-row">
+                <div>
+                    <div class="d-label">Cinema</div>
+                    <div class="d-val" id="out-cinema">PVR: Phoenix Marketcity, Kurla</div>
+                </div>
+            </div>
+
+            <div class="details-row">
+                <div>
+                    <div class="d-label">Screen</div>
+                    <div class="d-val" id="out-screen">AUDI 03</div>
+                </div>
+                <div class="text-right">
+                    <div class="d-label text-right">Seats</div>
+                    <div class="d-val d-val-highlight" id="out-seats">GOLD - F4, F5 (2 Tickets)</div>
+                </div>
+            </div>
+
+            <div class="divider-dashed"></div>
+
+            <div class="qr-area">
+                <div class="booking-id-pill" id="out-id">BOOKING ID: W3E4R5T</div>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=BMS-APP-TICKET" style="width: 100px; mix-blend-mode: multiply;">
+                <div class="instruction">Scan this QR Code at the entrance</div>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <div class="cancel-btn">Cancel Booking</div>
+            <div class="total-price">
+                <div class="total-label">Total Amount</div>
+                <div class="total-val" id="out-price">Rs. 840.00</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function refresh() {
+            document.getElementById('out-poster').style.backgroundImage = `url('${document.getElementById('in-poster').value}')`;
+            document.getElementById('out-title').innerText = document.getElementById('in-title').value;
+            document.getElementById('out-tags').innerText = document.getElementById('in-tags').value;
+            document.getElementById('out-date').innerText = document.getElementById('in-date').value;
+            document.getElementById('out-cinema').innerText = document.getElementById('in-cinema').value;
+            document.getElementById('out-screen').innerText = document.getElementById('in-screen').value;
+            document.getElementById('out-seats').innerText = document.getElementById('in-seats').value;
+            document.getElementById('out-id').innerText = "BOOKING ID: " + document.getElementById('in-id').value;
+            document.getElementById('out-price').innerText = document.getElementById('in-price').value;
+        }
+    </script>
+</body>
+</html>
